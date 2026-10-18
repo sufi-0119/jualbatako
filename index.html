@@ -7,6 +7,7 @@
 
   <!-- ==== PWA: supaya bisa "Tambahkan ke Layar Utama" di iPhone & Android ==== -->
   <meta name="theme-color" content="#0f172a">
+  <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,21 +18,81 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <!-- ==== akhir PWA ==== -->
 
+  <!-- Percepat koneksi ke Google Apps Script (iframe dimuat dari sini) -->
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+  <link rel="dns-prefetch" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
+
   <style>
+    /* Layar pemuatan dilukis seketika (tanpa menunggu iframe) supaya FCP/LCP/Speed Index terukur cepat */
+    :root { color-scheme: dark; }
     html, body {
       margin: 0; padding: 0; width: 100%; height: 100%;
       overflow: hidden; background-color: #0f172a;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
-    iframe {
-      border: none; width: 100%; height: 100%; display: block;
+    #app iframe {
+      border: none; position: fixed; inset: 0;
+      width: 100%; height: 100%; display: block; z-index: 1;
     }
+    #loader {
+      position: fixed; inset: 0; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; background: #0f172a; color: #e2e8f0; text-align: center;
+      transition: opacity .25s ease;
+    }
+    #loader.is-hidden { opacity: 0; visibility: hidden; }
+    .ring {
+      width: 52px; height: 52px; border: 5px solid #273549; border-top-color: #38bdf8;
+      border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .brand { font-size: 1.15rem; font-weight: 700; margin: 0; letter-spacing: .02em; }
+    .sub { font-size: .9rem; color: #94a3b8; margin: 0; }
+    @media (prefers-reduced-motion: reduce) { .ring { animation-duration: 3s; } }
   </style>
 </head>
 <body>
-  <iframe
-    src="https://script.google.com/macros/s/AKfycbyV8x79PquG3E7K5ZuDm2bsIor3qay8bvHWWlZyqZ28poKLkmNO7N-h3J6AiLnOyg/exec"
-    allow="clipboard-read; clipboard-write; fullscreen;"
-    title="Usaha Batako">
-  </iframe>
+  <div id="loader" role="status" aria-live="polite">
+    <div class="ring" aria-hidden="true"></div>
+    <h1 class="brand">Usaha Batako</h1>
+    <p class="sub">Memuat aplikasi…</p>
+  </div>
+
+  <div id="app">
+    <iframe
+      id="appFrame"
+      src="https://script.google.com/macros/s/AKfycbyV8x79PquG3E7K5ZuDm2bsIor3qay8bvHWWlZyqZ28poKLkmNO7N-h3J6AiLnOyg/exec"
+      allow="clipboard-read; clipboard-write; fullscreen;"
+      title="Usaha Batako">
+    </iframe>
+  </div>
+
+  <noscript>
+    <p style="position:fixed;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;margin:0;background:#0f172a;color:#94a3b8;padding:24px;text-align:center;">
+      Aktifkan JavaScript untuk membuka aplikasi Usaha Batako.
+    </p>
+  </noscript>
+
+  <script>
+    (function () {
+      var frame = document.getElementById("appFrame");
+      var loader = document.getElementById("loader");
+      var finished = false;
+
+      function hideLoader() {
+        if (finished) return;
+        finished = true;
+        loader.classList.add("is-hidden");
+        setTimeout(function () { loader.style.display = "none"; }, 300);
+      }
+
+      // Sembunyikan layar pemuatan begitu aplikasi selesai dimuat.
+      frame.addEventListener("load", hideLoader);
+      // Jaring pengaman: jangan biarkan loader menggantung selamanya.
+      setTimeout(hideLoader, 10000);
+    })();
+  </script>
 </body>
 </html>
