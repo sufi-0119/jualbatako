@@ -18,10 +18,8 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <!-- ==== akhir PWA ==== -->
 
-  <!-- Percepat koneksi ke Google Apps Script (iframe dimuat dari sini) -->
+  <!-- Percepat koneksi ke Google Apps Script (isi iframe dimuat dari sini) -->
   <link rel="preconnect" href="https://script.google.com" crossorigin>
-  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-  <link rel="dns-prefetch" href="https://script.google.com">
   <link rel="dns-prefetch" href="https://script.googleusercontent.com">
 
   <style>
@@ -40,24 +38,31 @@
       position: fixed; inset: 0; z-index: 2;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 14px; background: #0f172a; color: #e2e8f0; text-align: center;
-      transition: opacity .25s ease;
+      padding: 24px; box-sizing: border-box; transition: opacity .25s ease;
     }
     #loader.is-hidden { opacity: 0; visibility: hidden; }
     .ring {
       width: 52px; height: 52px; border: 5px solid #273549; border-top-color: #38bdf8;
       border-radius: 50%; animation: spin 1s linear infinite;
     }
+    .ring.is-off { animation: none; border-top-color: #273549; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .brand { font-size: 1.15rem; font-weight: 700; margin: 0; letter-spacing: .02em; }
-    .sub { font-size: .9rem; color: #94a3b8; margin: 0; }
+    .sub { font-size: .9rem; color: #94a3b8; margin: 0; max-width: 22rem; }
+    #retry {
+      display: none; margin-top: 6px; padding: 11px 22px; border: none; border-radius: 12px;
+      background: #38bdf8; color: #052e16; font-weight: 700; font-size: .95rem; cursor: pointer;
+    }
+    #retry.is-shown { display: inline-block; }
     @media (prefers-reduced-motion: reduce) { .ring { animation-duration: 3s; } }
   </style>
 </head>
 <body>
   <div id="loader" role="status" aria-live="polite">
-    <div class="ring" aria-hidden="true"></div>
+    <div class="ring" id="ring" aria-hidden="true"></div>
     <h1 class="brand">Usaha Batako</h1>
-    <p class="sub">Memuat aplikasi…</p>
+    <p class="sub" id="statusText">Memuat aplikasi…</p>
+    <button id="retry" type="button">Coba Lagi</button>
   </div>
 
   <div id="app">
@@ -79,6 +84,9 @@
     (function () {
       var frame = document.getElementById("appFrame");
       var loader = document.getElementById("loader");
+      var ring = document.getElementById("ring");
+      var statusText = document.getElementById("statusText");
+      var retry = document.getElementById("retry");
       var finished = false;
 
       function hideLoader() {
@@ -88,11 +96,45 @@
         setTimeout(function () { loader.style.display = "none"; }, 300);
       }
 
-      // Sembunyikan layar pemuatan begitu aplikasi selesai dimuat.
+      function showOffline() {
+        finished = false;
+        loader.classList.remove("is-hidden");
+        loader.style.display = "flex";
+        ring.classList.add("is-off");
+        statusText.textContent = "Tidak ada koneksi internet.";
+        retry.classList.add("is-shown");
+      }
+
+      function online() {
+        ring.classList.remove("is-off");
+        statusText.textContent = "Memuat aplikasi…";
+        retry.classList.remove("is-shown");
+      }
+
+      retry.addEventListener("click", function () {
+        if (navigator.onLine === false) { showOffline(); return; }
+        online();
+        frame.src = frame.src; // paksa muat ulang
+      });
+
       frame.addEventListener("load", hideLoader);
-      // Jaring pengaman: jangan biarkan loader menggantung selamanya.
-      setTimeout(hideLoader, 10000);
+
+      window.addEventListener("offline", showOffline);
+      window.addEventListener("online", function () {
+        online();
+        frame.src = frame.src;
+      });
+
+      if (navigator.onLine === false) { showOffline(); }
+      else { setTimeout(hideLoader, 10000); }
     })();
+
+    // Service Worker: shell instan saat kunjungan ulang + dukungan offline.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js", { scope: "./" }).catch(function () {});
+      });
+    }
   </script>
 </body>
 </html>
